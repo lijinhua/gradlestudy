@@ -1,0 +1,463 @@
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+apply from: this.file('common.gradle')
+
+buildscript {
+    repositories {
+        google()
+        jcenter()
+        
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:3.4.2'
+        
+        // NOTE: Do not place your application dependencies here; they belong
+        // in the individual module build.gradle files
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        jcenter()
+        mavenLocal()
+        
+    }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}
+
+////////////////////////////gradle的生命周期监听///////////////////////////////////////////////
+/**
+ * https://blog.csdn.net/bencheng06/article/details/83628912
+ * 配置阶段开始前的阶段监听回调
+ */
+this.beforeEvaluate {
+    println "配置阶段开始前。。。。"
+}
+/**
+ * 配置阶段完成时候的回调
+ */
+this.afterEvaluate {
+    println "配置阶段完成"
+}
+/**
+ * gradle执行完毕后的监听回调
+ */
+this.gradle.buildFinished {
+    println "gradle执行完毕后的监听回调"
+}
+
+this.gradle.beforeProject {
+    println "工程开始执行前"
+}
+
+this.gradle.afterProject {
+    println "工程执行阶段过后 "
+}
+
+////////////////////////////////project相关的api讲解//////////////////////////////////////////////
+/**
+ * proejct相关的api详解
+ * https://blog.csdn.net/bencheng06/article/details/83628912
+ * **/
+this.getProejcts()
+def getProejcts(){
+    println '-------------------------'
+    println 'Root Project'
+    println '-------------------------'
+    this.getAllprojects().eachWithIndex { Project entry, int i ->
+        if(i==0){
+            println "Root Project :'${entry.name}'"
+        }else{
+            println "+  Project :'${entry.name}'"
+        }
+    }
+
+}
+this.getSubProject()
+
+/**
+ * 手动 实现一个获取项目下所有子project的方法
+ */
+def getSubProject() {
+
+    println '''
+		------------------------------------------------------------
+		Sub project
+		------------------------------------------------------------
+		'''
+
+    this.subprojects .eachWithIndex { project, index ->
+
+        println "+-------- Project ${project.name}"
+
+    }
+}
+this.getRootPro()
+/**
+ * 手动 实现一个获取项目根project的方法
+ */
+def getRootPro() {
+
+    println '''
+	------------------------------------------------------------
+	Root project
+	------------------------------------------------------------
+	'''
+
+    println "+-------- Root project ${this.rootProject.name}"
+
+}
+
+this.getParentPro()
+/**
+ * 手动 实现一个获取项目父project的方法
+ */
+def getParentPro() {
+
+    println '''
+	------------------------------------------------------------
+	Parent project
+	------------------------------------------------------------
+	'''
+    if(this.getParent()!=null){
+        def name =this.getParent().name
+        println "+-------- Parent project ${name}"
+    }else{
+        println "+-------- Parent project null"
+    }
+}
+////////////////////////////////project相关的api讲解下 project 的相关配置//////////////////////////////////////////////
+
+// project(“app”)从当前节点下（包括当前节点）查找名称对应的project
+
+project("app"){
+    Project project ->
+        println '''
+		------------------------------------------------------------
+		获取单个 project ，并进行操作,为当前这个app配置一个东西
+		------------------------------------------------------------
+		'''
+
+        apply plugin: 'com.android.application'
+        group 'com.lijinhua'
+        version '1.0'
+
+        dependencies {
+
+        }
+
+        android{
+
+        }
+}
+
+/**
+ * 配置当前节点project及其所有的子project
+ */
+allprojects { project->
+    println "当前配置的project是 ${project.name}"
+    version = '1.0.8'
+    println "全局配置后 ${project.name} 的Version是 ${version} "
+}
+
+println "project 全局配置后 group是="+project('app').group
+
+
+//subprojects配置当前节点下所有子节点的project
+subprojects {
+    println "当前配置的project是 ${it.name}"
+    version = '1.1.8'
+    // apply from '../publishToMaven.gradle'
+//    if(project.plugins.hasPlugin('com.android.library')){
+//        // apply from '../publishToMaven.gradle'
+//    }
+
+}
+
+////////////////////////////////project 属性相关的api//////////////////////////////////////////////
+/***
+ * https://blog.csdn.net/bencheng06/article/details/83629003
+ * 上面是 gradle 中 project 类的源代码，主要定义了一下的语法规范
+ * 可以查看project的源码，为什么外面的名字必须是build.gradle
+ * */
+// 通过在common.gradle中通过ext来定义统一的配置属性，然后在build.gradle里面统一引入
+/**
+ * 进一步演变，既然子工程可以获取 rootProject 那我们也可以获取 rootProject 定义的扩展属性，
+ * 于是我们可以在 rootProject 定义公共的扩展属性，在子 project中使用
+ * 上面定义的common.gradle文件直接是在build.gradle中import,那么就相当于在rootproject中引入了，所以
+ * 子工程就需要通过rootProject.ext的方式使用这个扩展属性
+ *
+ * 这样使用的原因很简单，gradle 规定父project的所有属性都是可以被子project继承的，可以在子project中直接使用
+ *
+ * 2. 通过gradle.properties定义扩展属性
+ * 这里面只能定义key-value的形式
+ * 这里面定义的属性可以在任意grdle文件中使用
+ * **/
+
+////////////////////////////////文件的操作//////////////////////////////////////////////
+
+//1、获取文件路径相关的api
+
+//获取根工程的绝对路径
+println "the root path is ${getRootDir().absolutePath}"
+//获取工程build文件的绝对路径
+println "the build path is ${getBuildDir().absolutePath}"
+//获取项目的绝对路经
+println "the Project path is ${getProjectDir().absolutePath}"
+
+// 2、使用gradle中的api去读取文件，在子project中编写代码读取rootproject中文件的内容
+
+println getContent('common.gradle')
+def getContent(String path){
+    try {
+        // 相当于从当前的proejct开始查找
+        def file = file(path)
+        return file.text
+    }catch(GradleException e){
+        println "file not found"
+    }
+    return null
+}
+
+// 3、copy方法不仅可以拷贝文件，还可实现文件夹的拷贝
+copy{
+    from file(getRootDir().absolutePath+"/gradle.properties")
+    into getRootProject().project("app").getBuildDir().absolutePath
+}
+
+//将一个文件夹拷贝到另一文件夹
+copy{
+    from file(getRootProject().project("app").getBuildDir().absolutePath+"/outputs/apk")
+    into getRootProject().getBuildDir().absolutePath
+}
+
+//将一个文件夹拷贝到另一文件夹
+copy{
+    from file(getRootProject().project("app").getBuildDir().absolutePath+"/outputs/apk")
+    into getRootProject().getBuildDir().absolutePath
+
+    exclude{
+        println it
+        if(it.getName().endsWith(".json")){
+            return true
+        }else {
+            return false
+        }
+    }
+    rename ("app-baidu-release.apk","baidu_release.apk")
+}
+
+//对文件树进行遍历
+fileTree(rootProject.project("app").getBuildDir().absolutePath + "/outputs/apk") { FileTree tree ->
+    tree.visit { FileTreeElement treeElement ->  //文件树中的每一个节点
+        println "the file name is ${treeElement.file.getName()}"
+
+        copy {
+            from file(treeElement.file)
+            into getRootProject().getBuildDir().absolutePath +"test"
+        }
+    }
+
+}
+//对文件树进行遍历
+fileTree(rootProject.project("app").getBuildDir().absolutePath + "/outputs/apk") { FileTree tree ->
+    tree.visit { FileTreeElement treeElement ->  //文件树中的每一个节点
+        println "the file name is ${treeElement.file.getName()}"
+        if (treeElement.file.getName().endsWith(".apk")) {
+            copy {
+                from file(treeElement.file)
+                into getRootProject().getBuildDir().absolutePath + "/test"
+                println "the file name  ${treeElement.file.getName()} copy success."
+            }
+        }
+    }
+}
+
+////////////////////////////////依赖相关的api详解//////////////////////////////////////////////
+// https://blog.csdn.net/bencheng06/article/details/83629061
+// 为这个项目添加依赖
+// 在根工程中通过buildscript完成项目依赖的配置
+// buildscript{}是project的一个方法，接收一个闭包，闭包的参数是RepositoryHandler
+
+/**
+ * 正常应用是这样的
+ * buildscript{RepositoryHandler repositories ->
+ * 	repositories.repositories{}
+ * 	repositories.dependencies{} }
+ * **/
+
+buildscript{
+    // 规定仓库地址，所有的子工程依赖库获取都是去这些仓库中查找
+    repositories{
+
+        google()
+
+        jcenter()
+
+        mavenCentral()
+
+        mavenLocal()
+
+//        maven {
+//            url 'https://maven.google.com/'
+//            name 'Google'
+//        }
+//        maven {
+//            url 'https://esri.bintray.com/arcgis'
+//            name "alias name"
+//            //如果需要验证需要添加验证信息
+//            credentials {
+//                username = 'joe'
+//                password = 'secret'
+//            }
+//        }
+    }
+    // 配置我们工程的插件依赖地址，gralde编程工具需要引入的库文件，为工具服务和APP没有关系
+//    dependencies{}
+}
+
+
+// project的依赖
+// 依赖关键字解析,implementation,provided
+
+////////////////////////////////gradle执行外部命令//////////////////////////////////////////////
+
+
+////////////////////////////////gradle task详解及实战//////////////////////////////////////////////
+// 查看gradle所有的task，https://blog.csdn.net/bencheng06/article/details/83628859
+// ./gradlew tasks
+// 定义task的几种方式
+// 调用Project的task关键字创建 Task
+task helloTask{
+    println "hello hello hello hello hello hello task"
+}
+
+//// 这里的 << 表示追加的意思, 向hello1 task中追加执行过程
+//task helloTask1 << {
+//    println "追加追加追加追加 追加追加追加追加hello task"
+//}
+
+//上面的代码是和下面之中代码是等价的（后面详细讲解）
+task helloTask1 {
+    doLast{
+        println "hello doLast doLast doLast doLast doLast task"
+    }
+}
+
+//也可以这样写
+task helloTask2 {
+    println "我会执行在配置阶段"
+}
+
+helloTask2.doLast{
+    println "我会执行在执行阶段执行阶段执行阶段执行阶段"
+}
+
+// 打印所有的task
+task printlnAllTask {
+    tasks.eachWithIndex {task,index->
+        println "${index}     ${task.name}"
+    }
+}
+
+// 通过TaskContainer 方式创建Task
+tasks.create(name: 'hello4')  {
+    println 'hello4hello4hello4hello4hello4hello4hello4'
+}
+
+// task的配置属性
+
+// 创建的时候配置
+//group : task 所在的分组，所有的task将按照这个分组归类，方便我们以后的查看 ；description ： 对当前task的描述，方便阅读
+task helloTask3(group:"study",description:"task 创建学习"){
+
+    println "hello task"
+    doFirst{
+        println "doFirst 1"
+    }
+    doFirst{
+        println "doFirst 2"
+    }
+    doLast{
+        println "doLast 1"
+    }
+    doLast{
+        println "doLast 2"
+    }
+}
+
+// 闭包中进行配置
+task helloTask4 {
+    setGroup("Study")
+    setDescription("创建学习")
+    println "hello task"
+
+    doFirst {
+        println "doFirst 1"
+    }
+    doFirst {
+        println "doFirst 2"
+    }
+    doLast {
+        println "doLast 1"
+    }
+    doLast {
+        println "doLast 2"
+    }
+}
+
+
+// task的执行
+task helloTask5 {
+    setGroup("study")
+    setDescription("创建学习")
+    println "我执行在 hello task 的配置阶段"
+
+    doFirst {
+        println "doFirst 1     我执行在 hello task 已有的的task之前"
+    }
+    doFirst {
+        println "doFirst 2     我执行在 hello task 已有的task之前"
+    }
+    doLast {
+        println "doLast 1   我执行在 hello task 已有的task之后"
+    }
+    doLast {
+        println "doLast 2   我执行在 hello task 已有的task之后"
+    }
+}
+
+
+helloTask5.doFirst {
+    println "doFirst 3      我执行在 hello task 已有的task之前"
+}
+
+
+helloTask5.doLast {
+    println "doLast 3       我执行在 hello task 已有的task之后"
+}
+
+
+//5. 实践统计打包时长
+//计算build执行时长
+//def buildStartTime, buildEndTime
+//this.afterEvaluate { Project project ->
+//    //保证要找到的task执行完毕
+//    def proBuildTask = project.tasks.getByName("preBuild")
+//    proBuildTask.doFirst {
+//        buildStartTime=System.currentTimeMillis()
+//        println "build start time is ${buildStartTime}"
+//    }
+//    proBuildTask.doLast {
+//        buildEndTime=System.currentTimeMillis()
+//        println "build end time is ${buildEndTime}"
+//
+//        println "the build used time is ${buildEndTime-buildStartTime}"
+//    }
+//}
+
+
+

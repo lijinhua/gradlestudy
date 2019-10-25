@@ -1,0 +1,3 @@
+include ':app', ':maventest'
+
+println "初始化阶段开始执行..."
